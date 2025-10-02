@@ -8,28 +8,29 @@ This project unites dynamic solar tracking with intelligent irrigation control f
 
 ## Hardware Components
 
-- **Solar Tracker:**
+- **Sun Tracker**
   - Arduino Nano/UNO
-  - Servo motor
-  - LDR sensors (East, West)
-- **Irrigation Controller:**
+  - Servo motor (panel actuation)
+  - 2x LDR sensors (East/West)
+- **Smart Irrigation**
   - ESP8266 microcontroller
   - Soil moisture sensor
   - Rain sensor
-  - DHT temperature/humidity sensor
-  - Relay module (pump)
-  - 16x2 I2C LCD
+  - DHT temp/humidity sensor
+  - Relay module (for water pump)
+  - 16x2 I2C LCD display
+  - Power and wiring acc., Blynk IoT app
 
 ---
 
 
 ## Features
 
-- Dynamic solar alignment for higher renewable power yield
-- Soil moisture/rain-based irrigation automation
-- DHT-driven climate sensing for crop comfort
-- LCD and Blynk app for status and manual override
-- Water/energy saving, remote management, error alarms
+- **Sun Tracking:** Panel always faces most intense sunlight—boosts power capture
+- **Auto-Irrigation:** Real-time soil moisture & rain sensing for optimized watering
+- **Manual override:** Pump can be controlled via app
+- **Live feedback:** LCD and Blynk app notifications/status
+- **Minimal adjustment, water/energy savings**
 
 ---
 
@@ -37,7 +38,7 @@ This project unites dynamic solar tracking with intelligent irrigation control f
 
 ```mermaid
 classDiagram
-class SolarTracker {
+class SunTracker {
 +setup()
 +loop()
 +servoControl()
@@ -52,8 +53,8 @@ class IrrigationController {
 +pumpFunction()
 +homeScreen()
 }
-SolarTracker --> Servo
-SolarTracker --> LDRSensors
+SunTracker --> Servo
+SunTracker --> LDRSensors
 IrrigationController --> SoilMoistureSensor
 IrrigationController --> RainSensor
 IrrigationController --> DHTSensor
@@ -67,55 +68,37 @@ IrrigationController --> BlynkCloud
 ## Flowchart
 
 ```mermaid
-classDiagram
-class SolarTracker {
-+setup()
-+loop()
-+servoControl()
-+ldrRead()
-}
-class IrrigationController {
-+setup()
-+loop()
-+dhtSensorUpdate()
-+soilMoistureCheck()
-+rainCheck()
-+pumpFunction()
-+homeScreen()
-}
-SolarTracker --> Servo
-SolarTracker --> LDRSensors
-IrrigationController --> SoilMoistureSensor
-IrrigationController --> RainSensor
-IrrigationController --> DHTSensor
-IrrigationController --> Relay
-IrrigationController --> LCD
-IrrigationController --> BlynkCloud
+flowchart TD
+StartTracker[Start Tracker] --> InitTracker[Init LDRs Servo]
+InitTracker --> LoopTracker[Panel At Start]
+LoopTracker --> TestLDRs{LDR Delta > Tolerance?}
+TestLDRs -- Yes --> Track[Move Servo Toward Sun]
+Track --> LoopTracker
+TestLDRs -- No --> Hold[Hold Position]
+Hold --> LoopTracker
+StartIrr[Start Irrigation] --> InitIrr[Init Sensors LCD Pump]
+InitIrr --> ReadSense[Read Soil Rain DHT]
+ReadSense --> CheckMoist{Soil Moisture Low AND No Rain?}
+CheckMoist -- Yes --> PumpOn[Pump ON]
+CheckMoist -- No --> PumpOff[Pump OFF]
+PumpOn --> UpdateLCD1[Notify LCD & IoT]
+PumpOff --> UpdateLCD2[Notify LCD & IoT]
+UpdateLCD1 --> ReadSense
+UpdateLCD2 --> ReadSense
+ManualOverride[Manual Pump Override] --> PumpOn
 ```
-
 ---
 
-## State Diagram
+## State "Flowchart" 
 
 ```mermaid
-stateDiagram-v2
-[*] --> TrackerIdle
-TrackerIdle --> Tracking : LDRs Imbalanced
-Tracking --> TrackerIdle : Aligned to Sun
-TrackerIdle --> LimitHit : Servo At Edge
-LimitHit --> TrackerIdle
-```
-
-```mermaid
-[*] --> IrrigationIdle
-IrrigationIdle --> Sensing : Timer Update
-Sensing --> Irrigate : Moisture Low, Rain False
-Sensing --> IrrigationIdle : Moisture OK, Rain or Pump Off
-Irrigate --> IrrigationIdle : Target Reached or Rain
-IrrigationIdle --> ManualOverride : Pump Switch Used
-ManualOverride --> Irrigate
-ManualOverride --> IrrigationIdle
-
+flowchart TD
+IdleIrrigation[Idle] -->|Timer Update| Sensing
+Sensing -->|Moisture Low and Dry| Irrigating
+Sensing -->|Moisture Okay or Rain| IdleIrrigation
+Irrigating -->|Soil Wet or Rain| IdleIrrigation
+IdleIrrigation -->|Manual Pump| Irrigating
+Irrigating -->|Manual Off| IdleIrrigation
 ```
 
 ---
